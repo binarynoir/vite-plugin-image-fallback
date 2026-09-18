@@ -1,6 +1,6 @@
 {
   "name": "@binarynoir/vite-plugin-image-fallback",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A Vite plugin that swaps a broken relative/root-relative image import for a placeholder SVG at build time, instead of failing the whole build.",
   "keywords": [
     "vite",
