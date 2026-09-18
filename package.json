@@ -1,0 +1,79 @@
+{
+  "name": "@binarynoir/vite-plugin-image-fallback",
+  "version": "0.0.0",
+  "description": "A Vite plugin that swaps a broken relative/root-relative image import for a placeholder SVG at build time, instead of failing the whole build.",
+  "keywords": [
+    "vite",
+    "vite-plugin",
+    "images",
+    "fallback",
+    "placeholder",
+    "build"
+  ],
+  "license": "MIT",
+  "author": "BinaryNoir",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/binarynoir/vite-plugin-image-fallback.git"
+  },
+  "homepage": "https://github.com/binarynoir/vite-plugin-image-fallback#readme",
+  "bugs": {
+    "url": "https://github.com/binarynoir/vite-plugin-image-fallback/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build",
+    "release": "node scripts/release.js",
+    "release:patch": "node scripts/release.js patch",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major"
+  },
+  "peerDependencies": {
+    "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.1",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
+    "tsup": "^8.3.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.19.0",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
+  },
+  "allowScripts": {
+    "esbuild@0.27.7": true,
+    "fsevents@2.3.3": true
+  }
+}
