@@ -4,11 +4,24 @@
 [![CI](https://github.com/binarynoir/vite-plugin-image-fallback/actions/workflows/ci.yml/badge.svg)](https://github.com/binarynoir/vite-plugin-image-fallback/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/@binarynoir/vite-plugin-image-fallback.svg)](LICENSE)
 
-A broken relative image import (a typo'd path, a file someone forgot to add,
-an asset that got renamed) normally fails your entire [Vite](https://vite.dev)
-build with a Rollup "could not resolve" error. This plugin swaps it for a
-placeholder SVG instead, so the build keeps going and you get a clear console
-warning pointing at the missing file instead of a hard stop.
+A [Vite](https://vite.dev) plugin that stops one broken image from taking
+down your whole build.
+
+## What this does
+
+If a page in your project imports an image that doesn't actually exist,
+maybe a typo in the filename, a file someone forgot to add, or an asset that
+got renamed, Vite normally stops the entire build with a Rollup "could not
+resolve" error. Nobody's build finishes until that one image gets fixed.
+
+This plugin catches that case instead. When an image import doesn't resolve
+to a real file, it swaps in a placeholder image and prints a clear console
+warning naming exactly which import is missing. Your build finishes, your
+site still deploys, and you can go fix the actual image without everyone
+else being blocked on it.
+
+Every image that does exist is left completely alone and passed straight
+through to Vite as usual. Only a genuinely missing one gets swapped.
 
 ## Install
 
