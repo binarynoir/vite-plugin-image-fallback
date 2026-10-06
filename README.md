@@ -107,3 +107,17 @@ Actions. First time publishing this package? See [PUBLISHING.md](PUBLISHING.md).
 ## License
 
 [MIT](LICENSE)
+
+---
+
+## Support
+
+If you encounter any issues or have questions, please open an issue on [GitHub](https://github.com/binarynoir/vite-plugin-image-fallback/issues).
+
+## Author
+
+John Smith III
+
+## Acknowledgments
+
+Thanks to all contributors and users for their support and feedback.
