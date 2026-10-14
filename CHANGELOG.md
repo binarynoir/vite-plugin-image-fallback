@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-14
+
+### Added
+
+- Hints: `enableImageFallbackHints` from `@binarynoir/vite-plugin-image-fallback/client` outlines each placeholder and explains it in a popover on hover, click or tap, naming the missing import and the file and line that imported it
+- `hints` option (default `true`): records that information in a `#image-fallback=…` fragment on the placeholder's URL; `false` uses `fallback` exactly as given
+
+### Changed
+
+- The build warning names the file and line that imported the missing image, and is logged once per missing import instead of once per build pass
+
+### Fixed
+
+- A relative import is resolved against the file that imported it, not the Vite root, so the warning names the path that was actually looked for
+
 ## [0.1.9] - 2026-10-14
 
 ### Changed

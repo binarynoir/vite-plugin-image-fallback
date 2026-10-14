@@ -17,4 +17,12 @@ export interface ImageFallbackOptions {
    * @default false
    */
   silent?: boolean;
+
+  /**
+   * Record which import was missing, and the file and line that imported it,
+   * in each placeholder's URL, for `enableImageFallbackHints` to explain on
+   * the page. Set to `false` to use the `fallback` URL exactly as given.
+   * @default true
+   */
+  hints?: boolean;
 }

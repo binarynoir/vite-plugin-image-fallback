@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { imageFallbackPlugin } from "../src/plugin.js";
+import { readHint } from "../src/hint.js";
 import type { Plugin } from "vite";
 import fs from "node:fs";
 
@@ -203,7 +204,14 @@ describe("imageFallbackPlugin", () => {
       const plugin = imageFallbackPlugin({ fallback: "/placeholder.png" });
       vi.mocked(fs.existsSync).mockReturnValue(false);
       const result = callLoad(plugin, "\0image-fallback:missing.png");
-      expect(result).toContain(JSON.stringify("/placeholder.png"));
+      expect(result).toContain('"/placeholder.png#image-fallback=');
+    });
+
+    it("returns the fallback exactly as given with hints: false", () => {
+      const plugin = imageFallbackPlugin({ fallback: "/placeholder.png", hints: false });
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      const result = callLoad(plugin, "\0image-fallback:missing.png");
+      expect(result).toBe(`export default ${JSON.stringify("/placeholder.png")}`);
     });
 
     it("suppresses the warning when silent is set", () => {
@@ -222,6 +230,77 @@ describe("imageFallbackPlugin", () => {
       callLoad(plugin, "\0image-fallback:missing.png");
       expect(warnSpy).toHaveBeenCalledOnce();
       warnSpy.mockRestore();
+    });
+  });
+
+  describe("hints", () => {
+    /** The default export of a loaded module, as the string it exports. */
+    const exported = (code: string | null | undefined) =>
+      JSON.parse(String(code).replace(/^export default /, "")) as string;
+
+    it("passes the importer through the virtual id", () => {
+      const plugin = imageFallbackPlugin();
+      const hook = plugin.resolveId as unknown as (source: string, importer?: string) => string;
+      expect(hook("./missing.png", "/site/docs/guide/page.md")).toBe(
+        "\0image-fallback:/site/docs/guide/page.md\0import:./missing.png",
+      );
+    });
+
+    it("records the missing import, its file and its line in the placeholder URL", () => {
+      const plugin = imageFallbackPlugin();
+      (plugin.configResolved as unknown as (c: { root: string }) => void)({ root: "/site/docs" });
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      vi.mocked(fs.readFileSync).mockReturnValue(
+        "# Page\n\nThe file `./missing.png` is shown below.\n\n![Diagram](./missing.png)\n",
+      );
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const url = exported(
+        callLoad(
+          plugin,
+          "\0image-fallback:/site/docs/guide/page.md?vue&type=script\0import:./missing.png",
+        ),
+      );
+      expect(url.startsWith("data:image/svg+xml;base64,")).toBe(true);
+      expect(readHint(url)).toEqual({ src: "./missing.png", file: "guide/page.md", line: 5 });
+      expect(warnSpy.mock.calls[0]?.[0]).toContain("missing.png (imported by guide/page.md:5)");
+      warnSpy.mockRestore();
+    });
+
+    it("resolves a relative import against the importing file, in the warning", () => {
+      const plugin = imageFallbackPlugin();
+      (plugin.configResolved as unknown as (c: { root: string }) => void)({ root: "/site/docs" });
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      callLoad(plugin, "\0image-fallback:/site/docs/guide/page.md\0import:./img/missing.png");
+      expect(warnSpy.mock.calls[0]?.[0]).toContain(
+        "Could not find /site/docs/guide/img/missing.png",
+      );
+      warnSpy.mockRestore();
+    });
+
+    it("warns once per missing import, though it is loaded again", () => {
+      const plugin = imageFallbackPlugin();
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      callLoad(plugin, "\0image-fallback:/site/a.md\0import:./x.png");
+      callLoad(plugin, "\0image-fallback:/site/a.md\0import:./x.png");
+      callLoad(plugin, "\0image-fallback:/site/b.md\0import:./x.png");
+      expect(warnSpy).toHaveBeenCalledTimes(2);
+      warnSpy.mockRestore();
+    });
+
+    it("leaves the line out when the importer can't be read", () => {
+      const plugin = imageFallbackPlugin({ silent: true });
+      (plugin.configResolved as unknown as (c: { root: string }) => void)({ root: "/site/docs" });
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      vi.mocked(fs.readFileSync).mockImplementation(() => {
+        throw new Error("ENOENT");
+      });
+      const url = exported(
+        callLoad(plugin, "\0image-fallback:/site/docs/page.md\0import:./missing.png"),
+      );
+      expect(readHint(url)).toEqual({ src: "./missing.png", file: "page.md" });
     });
   });
 });

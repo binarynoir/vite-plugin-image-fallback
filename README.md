@@ -55,11 +55,12 @@ only an import that doesn't resolve to a real file gets swapped.
 
 ## Options
 
-| Option       | Default                                                    | Description                                                                                         |
-| ------------ | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `extensions` | `["jpg", "jpeg", "png", "gif", "svg", "webp", "avif"]`     | File extensions (without the dot) treated as image imports.                                         |
-| `fallback`   | a plain gray placeholder SVG reading "Missing Image Asset" | The asset returned in place of a missing image — a data URI, or any string Vite can serve as a URL. |
-| `silent`     | `false`                                                    | Suppress the console warning normally emitted for each missing asset.                               |
+| Option       | Default                                                    | Description                                                                                                                                   |
+| ------------ | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `extensions` | `["jpg", "jpeg", "png", "gif", "svg", "webp", "avif"]`     | File extensions (without the dot) treated as image imports.                                                                                   |
+| `fallback`   | a plain gray placeholder SVG reading "Missing Image Asset" | The asset returned in place of a missing image — a data URI, or any string Vite can serve as a URL.                                           |
+| `silent`     | `false`                                                    | Suppress the console warning normally emitted for each missing asset.                                                                         |
+| `hints`      | `true`                                                     | Record which import was missing, and where, in each placeholder's URL, for the on-page hints below. `false` uses `fallback` exactly as given. |
 
 ```ts
 imageFallbackPlugin({
@@ -68,6 +69,53 @@ imageFallbackPlugin({
   silent: false,
 });
 ```
+
+## Hints
+
+Each placeholder can explain itself on the page, the same way
+[Broken Links](https://binarynoir.tech/plugins/broken-links) and
+[HTML Escape](https://binarynoir.tech/plugins/html-escape/) explain their
+fixes. Turn the hints on in the browser, in VitePress from your theme's
+`enhanceApp`:
+
+```ts
+// .vitepress/theme/index.ts
+import DefaultTheme from "vitepress/theme";
+import { enableImageFallbackHints } from "@binarynoir/vite-plugin-image-fallback/client";
+
+export default {
+  extends: DefaultTheme,
+  enhanceApp() {
+    enableImageFallbackHints();
+  },
+};
+```
+
+Every placeholder then gets a dashed outline. Hover it, or click or tap it,
+for a popover that names the missing import and the file and line that
+imported it:
+
+```txt
+plugins/image-fallback.md, line 19
+./missing-image-demo.png could not be found, so a placeholder is shown
+instead. Check the path and the file name, or add the image.
+```
+
+The build warning names the same file and line. The plugin records them in a
+`#image-fallback=…` fragment on the placeholder's URL, which the browser
+ignores when it loads the image, so the placeholder looks the same with or
+without the client script.
+
+`enableImageFallbackHints(options)` takes:
+
+| Option         | Default | Description                                                                                |
+| -------------- | ------- | ------------------------------------------------------------------------------------------ |
+| `hover`        | `true`  | Show the popover on mouse hover. `false` for click and tap only.                           |
+| `hoverDelay`   | `300`   | Milliseconds the mouse rests on a placeholder before the popover shows.                    |
+| `injectStyles` | `true`  | Inject the default styles. `false` lets you style `img[src*="#image-fallback="]` yourself. |
+
+The colors follow the VitePress theme and can be changed with the
+`--image-fallback-hint-error` CSS variable.
 
 ## Why not just let the build fail?
 
