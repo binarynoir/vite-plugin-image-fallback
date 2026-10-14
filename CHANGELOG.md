@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-14
+
+### Added
+
+- Dev server: a request for a missing image that isn't an import (such as a Markdown image VitePress compiles to a plain URL) gets the placeholder, with the missing path drawn into it, instead of the page's HTML, and logs a warning naming the page that requested it
+
+### Fixed
+
+- A root-relative image in Vite's `publicDir` is left to Vite instead of being replaced by the placeholder, including when `publicDir` is outside the root
+- An existing image is no longer turned into a virtual module that exported its raw source path, bypassing Vite's asset pipeline; every existing image is now left to Vite
+
 ## [0.2.0] - 2026-10-14
 
 ### Added

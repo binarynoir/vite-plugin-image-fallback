@@ -29,11 +29,11 @@ describe("imageFallbackPlugin", () => {
   });
 
   describe("asset resolution", () => {
-    it("should resolve existing image assets", () => {
+    it("should leave existing image assets to Vite", () => {
       const plugin = imageFallbackPlugin();
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      const result = callLoad(plugin, "\0image-fallback:test.png");
-      expect(result).toBeDefined();
+      expect(callResolveId(plugin, "./test.png")).toBeUndefined();
+      expect(callResolveId(plugin, "/test.png")).toBeUndefined();
     });
 
     it("should return fallback for missing assets", () => {
@@ -84,21 +84,21 @@ describe("imageFallbackPlugin", () => {
   describe("asset path handling", () => {
     it("should handle relative asset paths", () => {
       const plugin = imageFallbackPlugin();
-      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.existsSync).mockReturnValue(false);
       const result = callResolveId(plugin, "./test.png");
       expect(result).toContain("\0image-fallback:");
     });
 
     it("should handle nested asset paths", () => {
       const plugin = imageFallbackPlugin();
-      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.existsSync).mockReturnValue(false);
       const result = callResolveId(plugin, "./images/test.png");
       expect(result).toContain("\0image-fallback:");
     });
 
     it("should handle absolute paths", () => {
       const plugin = imageFallbackPlugin();
-      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.existsSync).mockReturnValue(false);
       const result = callResolveId(plugin, "/images/test.png");
       expect(result).toContain("\0image-fallback:");
     });
@@ -146,14 +146,14 @@ describe("imageFallbackPlugin", () => {
 
     it("should handle special characters in paths", () => {
       const plugin = imageFallbackPlugin();
-      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.existsSync).mockReturnValue(false);
       const result = callResolveId(plugin, "./test-file.png");
       expect(result).toContain("\0image-fallback:");
     });
 
     it("should handle very long paths", () => {
       const plugin = imageFallbackPlugin();
-      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.existsSync).mockReturnValue(false);
       const longPath = "./" + "a/".repeat(100) + "test.png";
       const result = callResolveId(plugin, longPath);
       expect(result).toContain("\0image-fallback:");
@@ -168,7 +168,7 @@ describe("imageFallbackPlugin", () => {
       );
       const existingResult = callResolveId(plugin, "./existing.png");
       const missingResult = callResolveId(plugin, "./missing.png");
-      expect(existingResult).toContain("\0image-fallback:");
+      expect(existingResult).toBeUndefined();
       expect(missingResult).toContain("\0image-fallback:");
     });
 
@@ -184,12 +184,11 @@ describe("imageFallbackPlugin", () => {
     });
 
     it("should handle asset resolution chain", () => {
-      const plugin = imageFallbackPlugin();
-      vi.mocked(fs.existsSync).mockReturnValue(true);
+      const plugin = imageFallbackPlugin({ silent: true });
+      vi.mocked(fs.existsSync).mockReturnValue(false);
       const result1 = callResolveId(plugin, "./images/test.png");
       const result2 = callLoad(plugin, result1!);
-      expect(result2).toBeDefined();
-      expect(result2).toContain("/images/test.png");
+      expect(result2).toContain("data:image/svg+xml;base64");
     });
   });
 

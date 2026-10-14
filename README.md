@@ -51,7 +51,28 @@ Only relative (`./foo.png`) and root-relative (`/foo.png`) image imports are
 intercepted — bare package specifiers (`some-icon-package/icon.png`) are left
 alone so they still go through normal `node_modules` resolution. An existing
 file is untouched and passed straight through to Vite's own asset pipeline;
-only an import that doesn't resolve to a real file gets swapped.
+only an import that doesn't resolve to a real file gets swapped. A
+root-relative import counts as existing if it is in Vite's root or in its
+`publicDir`, wherever that is (VitePress's default `<srcDir>/public`, or an
+absolute path outside the root).
+
+## Dev server
+
+In `vite dev` (and `vitepress dev`), not every image is an import. VitePress
+compiles a Markdown image such as `![x](./assets/missing.png)` to a plain URL,
+which the browser requests directly. Without this plugin, a missing image's
+request gets the page's HTML back, and the browser shows its broken-image
+icon.
+
+The plugin answers those requests too. A request for an image that isn't in
+the root or `publicDir` gets the placeholder, with the missing path drawn
+into it, and logs the same warning, naming the page that requested it. A
+custom `fallback` data URI is served as is; a custom `fallback` URL is
+redirected to.
+
+The `#image-fallback=` hint can't be added to these URLs, so the on-page
+popover (see [Hints](#hints)) is available in builds only. In dev, the
+placeholder itself shows the missing path.
 
 ## Options
 
