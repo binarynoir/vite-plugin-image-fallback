@@ -8,6 +8,12 @@ export interface ImageFallbackHint {
   line?: number;
 }
 
+/**
+ * The response header that marks a dev-server placeholder, holding the
+ * missing path (URI-encoded). `enableImageFallbackHints` looks for it.
+ */
+export const FALLBACK_HEADER = "X-Image-Fallback";
+
 /** Marks a placeholder URL, ahead of the hint's JSON, in its #fragment. */
 export const HINT_MARKER = "image-fallback=";
 

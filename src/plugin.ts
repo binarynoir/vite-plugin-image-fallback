@@ -1,7 +1,7 @@
 import type { Connect, Plugin } from "vite";
 import fs from "node:fs";
 import path from "node:path";
-import { withHint, type ImageFallbackHint } from "./hint.js";
+import { FALLBACK_HEADER, withHint, type ImageFallbackHint } from "./hint.js";
 import type { ImageFallbackOptions } from "./types.js";
 
 const DEFAULT_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "svg", "webp", "avif"];
@@ -184,17 +184,23 @@ export function imageFallbackPlugin(options: ImageFallbackOptions = {}): Plugin 
       `Could not find ${file}${page ? ` (requested by ${page})` : ""}. Serving fallback image.`,
     );
 
+    res.setHeader(FALLBACK_HEADER, encodeURIComponent(pathname));
+    res.setHeader("Cache-Control", "no-cache");
+    // A HEAD request asks whether this is a placeholder, so it is answered
+    // here even for a URL fallback: a followed redirect would lose the header.
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
     if (!options.fallback) {
       res.setHeader("Content-Type", "image/svg+xml");
-      res.setHeader("Cache-Control", "no-cache");
-      res.end(req.method === "HEAD" ? undefined : defaultFallbackSvg(pathname));
+      res.end(defaultFallbackSvg(pathname));
       return;
     }
     const data = decodeDataUri(fallback);
     if (data) {
       res.setHeader("Content-Type", data.type);
-      res.setHeader("Cache-Control", "no-cache");
-      res.end(req.method === "HEAD" ? undefined : data.body);
+      res.end(data.body);
       return;
     }
     res.statusCode = 302;

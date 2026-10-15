@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
+### Added
+
+- Dev server: placeholder responses carry an `X-Image-Fallback` header with the missing path, and a `HEAD` request for a missing image is answered with it (never redirected)
+- Hints in dev: `enableImageFallbackHints` finds the dev server's placeholders with one `HEAD` request per same-origin image URL (including images added later), marks them with a `data-image-fallback` attribute and an `image-fallback` event, and explains them with the same outline and popover as built ones. On by default on a page the Vite dev server served; set `devPlaceholders` to choose
+- `isImageFallback(img)` from `/client`: whether an image is a placeholder, built or dev
+
 ## [0.3.0] - 2026-10-14
 
 ### Added

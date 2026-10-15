@@ -70,9 +70,12 @@ into it, and logs the same warning, naming the page that requested it. A
 custom `fallback` data URI is served as is; a custom `fallback` URL is
 redirected to.
 
-The `#image-fallback=` hint can't be added to these URLs, so the on-page
-popover (see [Hints](#hints)) is available in builds only. In dev, the
-placeholder itself shows the missing path.
+Every placeholder response carries an `X-Image-Fallback` header holding the
+missing path (URI-encoded), and a `HEAD` request for a missing image gets a
+`200` with that header (never a redirect). The `#image-fallback=` hint can't
+be added to these URLs, so on a dev-server page the client script (see
+[Hints](#hints)) asks the server about each image with a `HEAD` request
+instead, and shows the same outline and popover.
 
 ## Options
 
@@ -129,11 +132,25 @@ without the client script.
 
 `enableImageFallbackHints(options)` takes:
 
-| Option         | Default | Description                                                                                |
-| -------------- | ------- | ------------------------------------------------------------------------------------------ |
-| `hover`        | `true`  | Show the popover on mouse hover. `false` for click and tap only.                           |
-| `hoverDelay`   | `300`   | Milliseconds the mouse rests on a placeholder before the popover shows.                    |
-| `injectStyles` | `true`  | Inject the default styles. `false` lets you style `img[src*="#image-fallback="]` yourself. |
+| Option            | Default                              | Description                                                                                                                    |
+| ----------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `hover`           | `true`                               | Show the popover on mouse hover. `false` for click and tap only.                                                               |
+| `hoverDelay`      | `300`                                | Milliseconds the mouse rests on a placeholder before the popover shows.                                                        |
+| `injectStyles`    | `true`                               | Inject the default styles. `false` lets you style `img[src*="#image-fallback="]` and `img[data-image-fallback]` yourself.      |
+| `devPlaceholders` | on a page the Vite dev server served | Find the dev server's placeholders with one `HEAD` request per same-origin image URL, including images added or changed later. |
+
+On the dev server, each placeholder found gets a `data-image-fallback`
+attribute holding the missing path, and fires a bubbling `image-fallback`
+event whose `detail.src` is that path. To treat placeholders differently in
+your own code, for example to skip them in a click-to-zoom handler, use
+`isImageFallback(img)`. It is true for built placeholders, and for dev ones
+once they have been found:
+
+```ts
+import { isImageFallback } from "@binarynoir/vite-plugin-image-fallback/client";
+
+if (isImageFallback(img)) return; // nothing to zoom
+```
 
 The colors follow the VitePress theme and can be changed with the
 `--image-fallback-hint-error` CSS variable.

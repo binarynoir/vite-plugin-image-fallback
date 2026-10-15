@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 // Browser-only: the one module that runs in the page, not at build time.
-import { HINT_MARKER, readHint, type ImageFallbackHint } from "./hint.js";
+import { FALLBACK_HEADER, HINT_MARKER, readHint, type ImageFallbackHint } from "./hint.js";
 
 export interface ImageFallbackHintOptions {
   /**
@@ -17,12 +17,24 @@ export interface ImageFallbackHintOptions {
   /**
    * Inject the default styles: the dashed outline, the `help` cursor and the
    * popover. Set to `false` to style placeholders (`img[src*="#image-fallback="]`)
-   * and `.image-fallback-hint-popover` yourself. Default: `true`.
+   * and `img[data-image-fallback]` (dev placeholders) and
+   * `.image-fallback-hint-popover` yourself. Default: `true`.
    */
   injectStyles?: boolean;
+  /**
+   * Find the dev server's placeholders, which have no hint in their URL: ask
+   * the server about each same-origin image with a `HEAD` request (once per
+   * URL), and mark the ones it answers with an `X-Image-Fallback` header
+   * with a `data-image-fallback` attribute holding the missing path. Each
+   * marked image also fires a bubbling `image-fallback` event.
+   * Default: `true` on a page served by the Vite dev server, else `false`.
+   */
+  devPlaceholders?: boolean;
 }
 
-const SELECTOR = `img[src*="#${HINT_MARKER}"]`;
+/** Set on a dev-server placeholder, holding the missing path. */
+const DEV_ATTRIBUTE = "data-image-fallback";
+const SELECTOR = `img[src*="#${HINT_MARKER}"], img[${DEV_ATTRIBUTE}]`;
 const STYLE_ID = "image-fallback-hint-style";
 
 // Colors fall back to VitePress theme variables, then to neutral values, and
@@ -80,6 +92,91 @@ function appendWithCode(parent: HTMLElement, text: string): void {
   });
 }
 
+/**
+ * Whether `image` is a placeholder: a built one, with a hint in its URL, or
+ * one from the dev server that `enableImageFallbackHints` has found.
+ */
+export function isImageFallback(image: Element): boolean {
+  return image.matches(SELECTOR);
+}
+
+/** What a placeholder records about its missing image, or `null` if it isn't one. */
+function hintFor(image: Element): ImageFallbackHint | null {
+  const devPath = image.getAttribute(DEV_ATTRIBUTE);
+  if (devPath) return { src: devPath };
+  return readHint(image.getAttribute("src") ?? "");
+}
+
+/** Whether this page was served by the Vite dev server, which injects its client. */
+function isViteDevPage(): boolean {
+  return !!document.querySelector('script[src*="/@vite/client"]');
+}
+
+/**
+ * Asks the dev server about each image as it appears or changes, and marks
+ * its placeholders. Returns a function that stops watching.
+ */
+function watchDevPlaceholders(): () => void {
+  // One HEAD request per URL: the missing path, or null for a real image.
+  const answers = new Map<string, Promise<string | null>>();
+
+  const ask = (url: string): Promise<string | null> => {
+    let answer = answers.get(url);
+    if (!answer) {
+      answer = fetch(url, { method: "HEAD", cache: "no-store" })
+        .then((response) => response.headers.get(FALLBACK_HEADER))
+        .then((value) => (value ? decodeURIComponent(value) : null))
+        .catch(() => null);
+      answers.set(url, answer);
+    }
+    return answer;
+  };
+
+  const check = (image: HTMLImageElement): void => {
+    const src = image.getAttribute("src");
+    if (!src || src.startsWith("data:") || src.includes(`#${HINT_MARKER}`)) return;
+    let url: URL;
+    try {
+      url = new URL(src, document.baseURI);
+    } catch {
+      return;
+    }
+    if (url.origin !== window.location.origin) return;
+    void ask(url.href).then((missing) => {
+      // The image may have moved on to another src while the server answered.
+      if (!missing || image.getAttribute("src") !== src) return;
+      image.setAttribute(DEV_ATTRIBUTE, missing);
+      image.dispatchEvent(
+        new CustomEvent("image-fallback", { bubbles: true, detail: { src: missing } }),
+      );
+    });
+  };
+
+  const checkWithin = (node: Node): void => {
+    if (node instanceof HTMLImageElement) check(node);
+    else if (node instanceof Element) node.querySelectorAll("img").forEach(check);
+  };
+
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type === "attributes" && mutation.target instanceof HTMLImageElement) {
+        mutation.target.removeAttribute(DEV_ATTRIBUTE);
+        check(mutation.target);
+      } else {
+        mutation.addedNodes.forEach(checkWithin);
+      }
+    }
+  });
+  observer.observe(document.documentElement, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["src"],
+  });
+  checkWithin(document.documentElement);
+  return () => observer.disconnect();
+}
+
 /** "guide/api.md, line 12", or whichever of the two the hint carries. */
 function locationText(hint: ImageFallbackHint): string {
   return [hint.file, hint.line && `line ${hint.line}`].filter(Boolean).join(", ");
@@ -116,6 +213,7 @@ export function enableImageFallbackHints(options: ImageFallbackHintOptions = {})
   if (typeof document === "undefined" || typeof window === "undefined") return () => {};
 
   const { hover = true, hoverDelay = 300, injectStyles = true } = options;
+  const devPlaceholders = options.devPlaceholders ?? isViteDevPage();
 
   if (!document.getElementById(STYLE_ID)) {
     const style = document.createElement("style");
@@ -148,7 +246,7 @@ export function enableImageFallbackHints(options: ImageFallbackHintOptions = {})
 
   const open = (image: Element): void => {
     close();
-    const hint = readHint(image.getAttribute("src") ?? "");
+    const hint = hintFor(image);
     if (!hint) return;
     anchor = image;
 
@@ -242,8 +340,10 @@ export function enableImageFallbackHints(options: ImageFallbackHintOptions = {})
     document.addEventListener("pointerover", onPointerOver);
     document.addEventListener("pointerout", onPointerOut);
   }
+  const stopWatching = devPlaceholders ? watchDevPlaceholders() : undefined;
 
   return () => {
+    stopWatching?.();
     close();
     document.removeEventListener("click", onClick);
     document.removeEventListener("keydown", onKeydown);

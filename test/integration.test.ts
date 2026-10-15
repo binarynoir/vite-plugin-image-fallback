@@ -160,6 +160,23 @@ describe("dev server", () => {
     expect(String(warn.mock.calls[0]?.[0])).toContain("(requested by /guide/page.html)");
   });
 
+  it("marks a placeholder with X-Image-Fallback, and answers HEAD with it too", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    await start();
+
+    const get = await fetch(`${origin}/guide/assets/missing.png`);
+    expect(get.headers.get("x-image-fallback")).toBe(
+      encodeURIComponent("/guide/assets/missing.png"),
+    );
+    const head = await fetch(`${origin}/guide/assets/missing.png`, { method: "HEAD" });
+    expect(head.status).toBe(200);
+    expect(head.headers.get("x-image-fallback")).toBe(
+      encodeURIComponent("/guide/assets/missing.png"),
+    );
+    const real = await fetch(`${origin}/guide/assets/real.svg`, { method: "HEAD" });
+    expect(real.headers.get("x-image-fallback")).toBeNull();
+  });
+
   it("leaves existing images, in the root and in publicDir, to Vite", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     await start();
@@ -198,6 +215,13 @@ describe("dev server", () => {
     expect(missing.headers.get("location")).toBe("/placeholder.png");
     const itself = await fetch(`${origin}/placeholder.png`, { redirect: "manual" });
     expect(itself.status).not.toBe(302);
+    // HEAD isn't redirected, so the marker header reaches the client.
+    const head = await fetch(`${origin}/guide/assets/missing.png`, {
+      method: "HEAD",
+      redirect: "manual",
+    });
+    expect(head.status).toBe(200);
+    expect(head.headers.get("x-image-fallback")).not.toBeNull();
   });
 
   it("stays silent with silent: true", async () => {
