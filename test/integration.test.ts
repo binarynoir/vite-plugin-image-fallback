@@ -187,6 +187,17 @@ describe("dev server", () => {
     }
   });
 
+  it("leaves VitePress's icon URLs to VitePress", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await start();
+
+    for (const url of ["/_vpi/simple-icons/github.svg", "/docs/_vpi/simple-icons/rss.svg"]) {
+      const response = await fetch(origin + url);
+      expect(response.headers.get("x-image-fallback"), url).toBeNull();
+    }
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it("strips the configured base before looking for the file", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     await start({ base: "/docs/" });

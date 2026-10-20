@@ -17,6 +17,9 @@ const MODULE_QUERIES = ["import", "url", "raw", "inline"];
 // shortened from the left.
 const MAX_LABEL_LENGTH = 48;
 
+/** VitePress 2's dev-server icon URLs, `/_vpi/<collection>/<name>.svg`, as VitePress itself matches them. */
+const VITEPRESS_ICON_RE = /\/_vpi\/[a-z0-9-]+\/[a-z0-9-]+\.svg$/;
+
 function escapeXml(text: string): string {
   return text.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
@@ -169,6 +172,9 @@ export function imageFallbackPlugin(options: ImageFallbackOptions = {}): Plugin 
     if (!imageRe.test(pathname)) return next();
     if (MODULE_QUERIES.some((query) => url.searchParams.has(query))) return next();
     if (pathname.startsWith("/@") || pathname.includes("/node_modules/")) return next();
+    // VitePress 2 serves its icons (social links, nav icons) at these URLs in
+    // dev, from a middleware that runs after this one: they are never on disk.
+    if (VITEPRESS_ICON_RE.test(pathname)) return next();
     // A custom fallback that is itself missing would otherwise redirect to itself.
     if (stripQuery(fallback) === pathname) return next();
     if (!pathname.startsWith(base)) return next();

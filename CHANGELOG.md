@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-20
+
+### Fixed
+
+- In the dev server, VitePress 2's icons (`/_vpi/<collection>/<name>.svg`, used by `socialLinks` and nav icons) are left to VitePress instead of being answered with the placeholder, which broke every social link icon in `vitepress dev`
+
 ## [0.4.1] - 2026-10-15
 
 ### Changed
